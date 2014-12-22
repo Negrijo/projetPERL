@@ -23,11 +23,14 @@ if(@ARGV){
 				}
 			
 	}
-	#affichage de la table de hachage
-	print %icecream;
-	print "\n";
-	print "PORT EN DESSOUS\n";
-	print $icecream{"port"};
+	$port = $icecream{"port"};
+	$error = $icecream{"error"};
+	$index = $icecream{"index"};
+	$clients = $icecream{"clients"};
+	$logfile = $icecream{"logfile"};
+	#manque la route de projection je ne sais pas encore quoi en faire
+
+	#print "$port \n $error \n $index \n $clients \n $logfile \n";
 }
 
 	elsif ($ARGV[0] eq "stop"){
