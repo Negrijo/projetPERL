@@ -1,0 +1,9 @@
+#!/usr/bin/perl
+
+$| = 1; # Pas de temporisation sur STDOUT, cf perlvar(1)
+
+print "$0: mon pid est $$, je démarre\n";
+
+sleep 3;
+
+print "$0: mon pid est $$, je m'arrête\n";

@@ -1,0 +1,47 @@
+#!/usr/bin/perl
+
+my %icecream;
+
+if(@ARGV){
+	if ($ARGV[0] eq "start"){
+		print "Démarrage du serveur\n";
+		#lecture des arguments dans comanche
+		open(CONF, "comanche.conf") || die("Ouverture de comanche.conf impossible !\n");
+		while(<CONF>){
+			#lecture ok
+			#print unless /^\s*[;\$#]|^$/;
+			#print "SPLIT\n";
+			#@axe = split (/ +/, $_, 1) unless /^\s*[;\$#]|^$/;
+			#print @axe;
+
+			unless(/^\s*[;\$#]|^$/){
+				chop;
+				@banana = split(/\s+/);
+				#printf ("User: %s Sh: %s \n",$banana[1],$banana[$#banana]);
+				#Tout est dans banana il faut le stocker dans la table de hachage
+				$icecream{$banana[1]} = $banana[$#banana];
+				}
+			
+	}
+	#affichage de la table de hachage
+	print %icecream;
+	print "\n";
+	print "PORT EN DESSOUS\n";
+	print $icecream{"port"};
+}
+
+	elsif ($ARGV[0] eq "stop"){
+		print "Arrêt du serveur\n";
+
+	}
+	elsif($ARGV[0] eq "status"){
+		print "Voici les informations :\n";
+
+	}
+	else{
+		die("Erreur d'argument => start ou stop ou status\n")
+	}
+}
+else{
+	die("Usage => comanche arg\n")
+}

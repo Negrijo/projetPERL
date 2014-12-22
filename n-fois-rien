@@ -1,0 +1,33 @@
+#!/usr/bin/perl
+
+die("usage: $0 N\n") if scalar(@ARGV) != 1;
+
+($n) = @ARGV;
+
+# Pas de temporisation sur STDOUT, cf perlvar(1)
+$| = 1;
+
+# Création des processus
+while ($n)
+{
+    $pid = fork;
+    if (! $pid)                 # FILS
+    {
+        system("perl rien");
+        exit;
+    }
+    else                        # PÈRE
+    {
+        push(@pids,($pid));
+        print "$0: nouveau fils de pid $pid\n";
+    }
+
+    $n -= 1;
+}
+
+# Attente de la fin des processus
+foreach (@pids)
+{
+    waitpid($_,0);
+    print "$0: mort du fils de pid $_\n";
+}
