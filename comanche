@@ -1,50 +1,71 @@
 #!/usr/bin/perl
 
+use Socket;
+
 my %icecream;
 
 if(@ARGV){
 	if ($ARGV[0] eq "start"){
-		print "Démarrage du serveur\n";
-		#lecture des arguments dans comanche
-		open(CONF, "comanche.conf") || die("Ouverture de comanche.conf impossible !\n");
-		while(<CONF>){
-			#lecture ok
-			#print unless /^\s*[;\$#]|^$/;
-			#print "SPLIT\n";
-			#@axe = split (/ +/, $_, 1) unless /^\s*[;\$#]|^$/;
-			#print @axe;
+			#lecture des arguments dans comanche
+			open(CONF, "comanche.conf") || die("Ouverture de comanche.conf impossible !\n");
+			while(<CONF>){
+				unless(/^\s*[;\$#]|^$/){
+					chop;
+					@banana = split(/\s+/);
+					$icecream{$banana[1]} = $banana[$#banana];
+				}	
+			}
+			$port = $icecream{"port"};
+			$error = $icecream{"error"};
+			$index = $icecream{"index"};
+			$clients = $icecream{"clients"};
+			$logfile = $icecream{"logfile"};
+			#manque la route de projection je ne sais pas encore quoi en faire
+			#Affichage pour le test
+			#print "$port \n $error \n $index \n $clients \n $logfile \n";
 
-			unless(/^\s*[;\$#]|^$/){
-				chop;
-				@banana = split(/\s+/);
-				#printf ("User: %s Sh: %s \n",$banana[1],$banana[$#banana]);
-				#Tout est dans banana il faut le stocker dans la table de hachage
-				$icecream{$banana[1]} = $banana[$#banana];
-				}
+
+			############################################################################################
+			$pid = fork();
+			if($pid == 0){
+				print "Démarrage du serveur\n";
+				#Création de la socket
+				socket(SERVEUR, PF_INET, SOCK_STREAM, getprotobyname('tcp'));
+				setsockopt(SERVEUR, SOL_SOCKET, SO_REUSEADDR, 1);
+				$mon_adresse = sockaddr_in ($port, INADDR_ANY);
+				##############
+				bind(SERVEUR,$mon_adresse);
+				listen(SERVEUR,$clients);
+			}
+			else{
+				open(PROC, ">procfils") || die("Impossible d'ouvrir le fichier -> procfils <-");
+				print PROC $pid;
+				close(PROC);
+			}
 			
-	}
-	$port = $icecream{"port"};
-	$error = $icecream{"error"};
-	$index = $icecream{"index"};
-	$clients = $icecream{"clients"};
-	$logfile = $icecream{"logfile"};
-	#manque la route de projection je ne sais pas encore quoi en faire
+			############################################################################################
 
-	#print "$port \n $error \n $index \n $clients \n $logfile \n";
-}
+		}
 
-	elsif ($ARGV[0] eq "stop"){
-		print "Arrêt du serveur\n";
+		elsif ($ARGV[0] eq "stop"){
+			print "Arrêt du serveur\n";
+			#Commande kill
+			open(FERM, "procfils") or die("Impossible d'ouvrir le fichier -> procfils <- pour la fermeture du serveur");
+			while(<FERM>){
+				chop;
+				$luke = print;
+			}
+			system "kill -9 $luke";
+		}
+		
+		elsif($ARGV[0] eq "status"){
+			print "Voici les informations :\n";
 
+		}
+		else{
+			die("Erreur d'argument => start ou stop ou status\n")
+		}
 	}
-	elsif($ARGV[0] eq "status"){
-		print "Voici les informations :\n";
-
-	}
-	else{
-		die("Erreur d'argument => start ou stop ou status\n")
-	}
-}
 else{
 	die("Usage => comanche arg\n")
 }
