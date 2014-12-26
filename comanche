@@ -3,6 +3,11 @@
 use Socket;
 
 my %icecream;
+my $client = 0;
+
+my $meth = "HTTP/1.1 200 OK \r\n"."Content-type: Text/HTML\r\n"."\r\n";
+my $debutHTML = "<!DOCTYPE HTML>\n"."<html>\n"."<head>\n"."</head>\n"."<body>\n"."<h1>Comanche</h1>\n";
+my $finHTML = "</body>\n"."</html>\n";
 
 if(@ARGV){
 	if ($ARGV[0] eq "start"){
@@ -28,34 +33,65 @@ if(@ARGV){
 			############################################################################################
 			$pid = fork();
 			if($pid == 0){
-				print "Démarrage du serveur\n";
+				
 				#Création de la socket
 				socket(SERVEUR, PF_INET, SOCK_STREAM, getprotobyname('tcp'));
 				setsockopt(SERVEUR, SOL_SOCKET, SO_REUSEADDR, 1);
 				$mon_adresse = sockaddr_in ($port, INADDR_ANY);
 				##############
-				bind(SERVEUR,$mon_adresse);
-				listen(SERVEUR,$clients);
-			}
-			else{
-				open(PROC, ">procfils") || die("Impossible d'ouvrir le fichier -> procfils <-");
-				print PROC $pid;
-				close(PROC);
-			}
-			
+				bind(SERVEUR,$mon_adresse) or die ("Erreur bind");
+				listen(SERVEUR,$clients) or die ("Erreur listen");
+
+				#print $mon_adresse;
+				print "2-Demarrage du serveur\n";
+
+				print "flag\n";
+				accept(CLIENT, SERVEUR) or die ("Accept impossible");
+					#$clients++;
+
+				print "flag3\n";
+
+				$worker = fork();
+
+				print "$worker\n";
+
+				if($worker == 0){
+					print "flag2\n";
+					print "Je suis dans le worker\n";
+					$request=<CLIENT>;
+					while(<CLIENT> =~ /^\r?\n/){}
+						print "dans le while";
+						$request =~ /(?-i)GET(?i)\s(\/(?:.*))\sHTTP\/1\.1/;
+						$request = $1;
+
+						print $request;
+
+						$peer = getpeername CLIENT;
+						($pcli, $iaddr) = sockaddr_in($peer);
+						$ip = inet_ntoa($iaddr);
+
+						print CLIENT $meth.$debutHTML."<html>Hello</html>".$finHTML;
+						
+					}
+
+				}	
+				else{
+					print"1-Sauvegarde du pid\n";
+					open(PROC, ">procfils") || die("Impossible d'ouvrir le fichier -> procfils <-");
+					print PROC $pid;
+					close(PROC);
+				}
+
 			############################################################################################
 
 		}
 
 		elsif ($ARGV[0] eq "stop"){
 			print "Arrêt du serveur\n";
-			#Commande kill
-			open(FERM, "procfils") or die("Impossible d'ouvrir le fichier -> procfils <- pour la fermeture du serveur");
-			while(<FERM>){
-				chop;
-				$luke = print;
-			}
-			system "kill -9 $luke";
+			close(SERVEUR) or die ("Fermeture du serveur impossible\n");
+			print "flag stop\n";
+			exit 1;
+			print "invisible\n";
 		}
 		
 		elsif($ARGV[0] eq "status"){
@@ -66,6 +102,6 @@ if(@ARGV){
 			die("Erreur d'argument => start ou stop ou status\n")
 		}
 	}
-else{
-	die("Usage => comanche arg\n")
-}
+	else{
+		die("Usage => comanche arg\n")
+	}
