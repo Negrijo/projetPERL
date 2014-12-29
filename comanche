@@ -31,7 +31,6 @@ if(@ARGV){
 						#regex
 						$icecream{$banana[0]}=$banana[1];
 						$icecream{"cheminroute"}=$banana[3];
-
 					}
 					#FINMODIF#
 					$icecream{$banana[1]} = $banana[$#banana];
@@ -65,28 +64,72 @@ if(@ARGV){
 
 				$worker = fork();
 
-				print "$worker\n";
+				#print "$worker\n";
 
 				if($worker == 0){
-					print "flag2\n";
-					print "Je suis dans le worker\n";
+					#print "flag2\n";
+					#print "Je suis dans le worker\n";
 					
 					$test = <CLIENT>;
 
-					print "$test\n";
+					#print "$test\n";
 
 					@decoupe = split(/\s+/, $test);
-
-					if ($decoupe[0] eq 'GET' && $decoupe[2] eq 'HTTP/1.1\r\n'){print "OK\n";}
 					
 					#Je regarde si la requete est valide.
-					$test =~ /(?-i)GET(?i)\s(\/(?:.*))\sHTTP\/1\.1/ || print "hello";
+					$test =~ /(?-i)GET(?i)\s(\/(?:.*))\sHTTP\/1\.1/ || eRROR405();
 					#Fin de la verification
 
 					$peer = getpeername CLIENT;
 					($pcli, $iaddr) = sockaddr_in($peer);
 					$ip = inet_ntoa($iaddr);
-						
+
+					#print "$decoupe[1]\n";
+					#print "$route\n";
+					#print "$cheminroute\n";
+					#print "$exec\n";
+					#print "$cheminexec\n";
+
+					#APPEL AUX FONCTIONS
+
+					if($decoupe[1] =~/$exec/ ){
+						@rudolphe = split(/\\1\\2/, $cheminexec);
+						chop $rudolphe[0];
+						$tornade = $rudolphe[0].$&;
+						#le chemin est ok
+
+					}
+					elsif ($decoupe[1] =~/$route/ ){
+						@santaclaus = split(/\\1/, $cheminroute);
+						my $lebonchemin = $santaclaus[0].$1;
+						#mon chemin semble est bon je dois encore le tester
+						#print "$lebonchemin\n";
+						if (-f $lebonchemin){
+							if (-x $lebonchemin){
+								#tester le type de fichier !
+								$type = `file $lebonchemin`;
+								@result = split(/\s+/, $type);
+								###
+								afficheHTML($lebonchemin) if ($result[1] eq 'HTML');
+								afficheTXT($lebonchemin) if ($result[1] eq 'ASCII');
+								afficheIMG($lebonchemin) if ($result[1] eq 'PNG');
+								###
+							}
+							else{
+								eRROR403();
+							}
+						}
+						else{
+							print "C'est un repertoire !\n" if (-d $lebonchemin);
+							afficheREP($lebonchemin);
+						}
+					}
+					else{
+						eRROR404();
+					}
+
+					###
+
 					}
 
 				}	
@@ -121,7 +164,7 @@ if(@ARGV){
 		die("Usage => comanche arg\n")
 	}
 
-######################FONCTIONS######################
+######################FONCTIONSERREURS######################
 
 # PAS DE PARAM
 sub eRROR400{
@@ -192,6 +235,76 @@ sub eRROR505{
 
 	print CLIENT $message.$debutERROR.$indication.$finERROR;
 }
+
+######################FONCTIONS######################
+
+sub ok200{
+	my $parlonshttp = "HTTP/1.1 200 OK \r\n"."Content-type: Text/HTML\r\n"."\r\n";
+	return $parlonshttp;
+}
+
+# param : le chemin du fichier HTML
+# ecrit le resultat sur le client
+sub afficheHTML{
+	$tete = ok200();
+	print CLIENT $tete;
+	open(HTML, "@_");
+	while(<HTML>){
+		print CLIENT;
+	}
+}
+
+# param : le chemin du fichier HTML
+# ecrit le resultat sur le client
+sub afficheTXT{
+	open(TXT, "@_");
+	while(<TXT>){
+		print CLIENT;
+	}
+}
+
+# param : le chemin du fichier HTML
+# ecrit le resultat sur le client
+sub afficheIMG{
+	$img = @_;
+	print "$_";
+	$tete = ok200();
+	#je n'arrive pas à afficher l'image je ne comprends pas pourquoi
+	my $debutIMG = "<!DOCTYPE HTML>\n"."<html>\n"."<head>\n"."</head>\n"."<body>\n"."<h3>Image</h3>"."<img src=/var/www/da2i/>\n";
+	my $finIMG = "</body>\n"."</html>\n";
+
+	print CLIENT $tete.$debutIMG.$finIMG;
+}
+
+# param : le chemin du fichier HTML
+# ecrit le resultat sur le client
+sub afficheREP{
+	$tete = ok200;
+	$chemincomplet = $_[0];
+	$repcourant = $1;
+
+	@chemincoupe = split(/$repcourant/, $chemincomplet);
+
+	print $chemincomplet."\n".$repcourant;
+
+	my $debutLIS = "<!DOCTYPE HTML>\n"."<html>\n"."<head>\n"."</head>\n"."<body>\n"."<h1>".$1."</h1>"."<ul>";
+	my $finLIS = "</body>\n"."</html>\n";
+	print CLIENT $tete.$debutLIS;
+	#repertoire parent
+	$darkvador = "<li><a href=".$chemincoupe[0].">..</a></li>";
+	print CLIENT "<li><a href=$chemincoupe[0]>..</a></li>";
+	#parcours du repertoire
+	foreach my $file (`ls @_`){
+		chomp;
+		#pas sur que ce soit utile puisque cela va donner /var/www/var/www/file
+		$path=$chemincoupe[0].$file;
+		print CLIENT "<li><a href=$path>".$file."</a></li>\n";
+	}
+	print CLIENT $finLIS;
+}
+
+
+
 
 
 
