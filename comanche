@@ -11,6 +11,8 @@ my $meth = "HTTP/1.1 200 OK \r\n"."Content-type: Text/HTML\r\n"."\r\n";
 my $debutHTML = "<!DOCTYPE HTML>\n"."<html>\n"."<head>\n"."</head>\n"."<body>\n"."<h1>Comanche</h1>\n";
 my $finHTML = "</body>\n"."</html>\n";
 
+$starop = $ARGV[0];
+
 ######################LEPROGRAMME######################
 
 if(@ARGV){
@@ -71,18 +73,24 @@ if(@ARGV){
 					#print "Je suis dans le worker\n";
 					
 					$test = <CLIENT>;
-
+					#ma requete
 					#print "$test\n";
 
 					@decoupe = split(/\s+/, $test);
 					
 					#Je regarde si la requete est valide.
-					$test =~ /(?-i)GET(?i)\s(\/(?:.*))\sHTTP\/1\.1/ || eRROR405();
+					$test =~ /(?-i)GET(?i)\s(\/(?:.*))\sHTTP\/1\.1/ || eRROR405() || eventLog(0);
 					#Fin de la verification
 
 					$peer = getpeername CLIENT;
 					($pcli, $iaddr) = sockaddr_in($peer);
+					#IP DU CLIENT
 					$ip = inet_ntoa($iaddr);
+
+					#REQUETE
+					#print ">>>>>>>$port";
+
+
 
 					#print "$decoupe[1]\n";
 					#print "$route\n";
@@ -97,23 +105,28 @@ if(@ARGV){
 						chop $rudolphe[0];
 						$tornade = $rudolphe[0].$&;
 						#le chemin est ok
+						$kode=200;
+						eventLog(1);
 
 					}
 					elsif ($decoupe[1] =~/$route/ ){
 						@santaclaus = split(/\\1/, $cheminroute);
-						my $lebonchemin = $santaclaus[0].$1;
+						$lebonchemin = $santaclaus[0].$1;
 						#mon chemin semble est bon je dois encore le tester
 						#print "$lebonchemin\n";
 						if (-f $lebonchemin){
 							if (-x $lebonchemin){
 								#tester le type de fichier !
+								#print $lebonchemin;	
 								$type = `file $lebonchemin`;
 								@result = split(/\s+/, $type);
 								###
+								$kode=200;
 								afficheHTML($lebonchemin) if ($result[1] eq 'HTML');
 								afficheTXT($lebonchemin) if ($result[1] eq 'ASCII');
 								afficheIMG($lebonchemin) if ($result[1] eq 'PNG');
 								###
+								eventLog(2);
 							}
 							else{
 								eRROR403();
@@ -122,10 +135,13 @@ if(@ARGV){
 						else{
 							print "C'est un repertoire !\n" if (-d $lebonchemin);
 							afficheREP($lebonchemin);
+							$kode=200;
+							eventLog(2);
 						}
 					}
 					else{
 						eRROR404();
+						eventLog(0);
 					}
 
 					###
@@ -145,6 +161,7 @@ if(@ARGV){
 		}
 
 		elsif ($ARGV[0] eq "stop"){
+			eventLog(1);
 			print "Arrêt du serveur\n";
 			close(SERVEUR) or die ("Fermeture du serveur impossible\n");
 			print "flag stop\n";
@@ -172,6 +189,7 @@ sub eRROR400{
 	my $debutERROR = "<!DOCTYPE HTML>\n"."<html>\n"."<head>\n"."<title>400 Bad Request</title>\n"."</head>\n"."<body>\n"."<h1> 400 Bad Request</h1>\n";
 	my $indication = "La syntaxe de la requete est erronee";
 	my $finERROR = "</body>\n"."</html>\n";
+	$kode=400;
 
 	print CLIENT $message.$debutERROR.$indication.$finERROR;
 }
@@ -182,6 +200,7 @@ sub eRROR403{
 	my $debutERROR = "<!DOCTYPE HTML>\n"."<html>\n"."<head>\n"."<title>403 Forbidden</title>\n"."</head>\n"."<body>\n"."<h1>403 Forbidden</h1>\n";
 	my $indication = "Le serveur a compris la requete, mais refuse de l'executer.";
 	my $finERROR = "</body>\n"."</html>\n";
+	$kode=403;
 
 	print CLIENT $message.$debutERROR.$indication.$finERROR;
 }
@@ -192,6 +211,7 @@ sub eRROR404{
 	my $debutERROR = "<!DOCTYPE HTML>\n"."<html>\n"."<head>\n"."<title>404 Not Found</title>\n"."</head>\n"."<body>\n"."<h1> 404 Not Found</h1>\n";
 	my $indication = "Ressource non trouvee";
 	my $finERROR = "</body>\n"."</html>\n";
+	$kode=404;
 
 	print CLIENT $message.$debutERROR.$indication.$finERROR;
 }
@@ -202,6 +222,7 @@ sub eRROR405{
 	my $debutERROR = "<!DOCTYPE HTML>\n"."<html>\n"."<head>\n"."<title>405 Method Not Allowed</title>\n"."</head>\n"."<body>\n"."<h1>405 Method Not Allowed</h1>\n";
 	my $indication = "Methode de requete non autorisee";
 	my $finERROR = "</body>\n"."</html>\n";
+	$kode=405;
 
 	print CLIENT $message.$debutERROR.$indication.$finERROR;
 }
@@ -212,6 +233,7 @@ sub eRROR415{
 	my $debutERROR = "<!DOCTYPE HTML>\n"."<html>\n"."<head>\n"."<title>415 Unsupported Media Type</title>\n"."</head>\n"."<body>\n"."<h1>415 Unsupported Media Type</h1>\n";
 	my $indication = "Format de requete non supporte pour une methode et une ressource donnees";
 	my $finERROR = "</body>\n"."</html>\n";
+	$kode=415;
 
 	print CLIENT $message.$debutERROR.$indication.$finERROR;
 }
@@ -222,6 +244,7 @@ sub eRROR503{
 	my $debutERROR = "<!DOCTYPE HTML>\n"."<html>\n"."<head>\n"."<title>503 Service Unavailable</title>\n"."</head>\n"."<body>\n"."<h1>503 Service Unavailable</h1>\n";
 	my $indication = "Service temporairement indisponible ou en maintenance";
 	my $finERROR = "</body>\n"."</html>\n";
+	$kode=503;
 
 	print CLIENT $message.$debutERROR.$indication.$finERROR;
 }
@@ -232,6 +255,7 @@ sub eRROR505{
 	my $debutERROR = "<!DOCTYPE HTML>\n"."<html>\n"."<head>\n"."<title>505 HTTP Version not supported</title>\n"."</head>\n"."<body>\n"."<h1>505 HTTP Version not supported</h1>\n";
 	my $indication = "505 HTTP Version not supported";
 	my $finERROR = "</body>\n"."</html>\n";
+	$kode=505;
 
 	print CLIENT $message.$debutERROR.$indication.$finERROR;
 }
@@ -301,6 +325,40 @@ sub afficheREP{
 		print CLIENT "<li><a href=$path>".$file."</a></li>\n";
 	}
 	print CLIENT $finLIS;
+}
+
+# param : exec ou route
+sub eventLog{
+	$datelog = time();
+	#$ARGV[0] ok $port ok $ip ok $test ok $lebonchemin ok $kode ok
+	if (($ARGV[0] eq "start") or ($ARGV[0] eq "stop")){
+		if ($_[0] eq "1"){
+			$typelog = $ARGV[0]." | get-d";		
+		}
+		elsif ($_[0] eq "2"){
+			$typelog = $ARGV[0]." | get-s";
+		}
+		$machinelog = "local";
+		$requetelog = $port;
+		$projectionlog = "vide";
+		$reponselog = "vide";
+ 	}
+ 	else{
+ 		$machinelog = $ip;
+ 		$requetelog = $test;
+ 		$projectionlog = $lebonchemin;# a modifier
+ 		$reponselog = $kode;
+ 	}
+
+ 	#construire la reponse à ecrire
+ 	$bcpdelog = "<".$datelog.">;<".$typelog.">;<".$machinelog.">;<".$requetelog.">;<".$projectionlog.">;<".$reponselog.">;";
+ 	#la reponse semble bonne
+
+ 	#ouverture du fichier
+ 	open(REPO, ">>$logfile") or die ("Impossible d'ouvrir le fichier $logfile");
+ 	print REPO "$bcpdelog\n";
+ 	close(REPO) or die ("Impossible de fermer le fichier $logfile");
+ 	print "fichier fermé";
 }
 
 
