@@ -62,13 +62,15 @@ if(@ARGV){
 
 				print "2-Demarrage du serveur\n";
 
-				accept(CLIENT, SERVEUR) or die ("Accept impossible");
-
+				
+			
 				$worker = fork();
 
 				#print "$worker\n";
 
 				if($worker == 0){
+					while(true){
+					accept(CLIENT, SERVEUR) or die ("Accept impossible");
 					#print "flag2\n";
 					#print "Je suis dans le worker\n";
 					
@@ -84,21 +86,7 @@ if(@ARGV){
 
 					$peer = getpeername CLIENT;
 					($pcli, $iaddr) = sockaddr_in($peer);
-					#IP DU CLIENT
 					$ip = inet_ntoa($iaddr);
-
-					#REQUETE
-					#print ">>>>>>>$port";
-
-
-
-					#print "$decoupe[1]\n";
-					#print "$route\n";
-					#print "$cheminroute\n";
-					#print "$exec\n";
-					#print "$cheminexec\n";
-
-					#APPEL AUX FONCTIONS
 
 					if($decoupe[1] =~/$exec/ ){
 						@rudolphe = split(/\\1\\2/, $cheminexec);
@@ -121,6 +109,7 @@ if(@ARGV){
 								$type = `file $lebonchemin`;
 								@result = split(/\s+/, $type);
 								###
+								#print "<<<<<<<<<<$lebonchemin\n";
 								$kode=200;
 								afficheHTML($lebonchemin) if ($result[1] eq 'HTML');
 								afficheTXT($lebonchemin) if ($result[1] eq 'ASCII');
@@ -133,21 +122,22 @@ if(@ARGV){
 							}
 						}
 						else{
-							print "C'est un repertoire !\n" if (-d $lebonchemin);
-							afficheREP($lebonchemin);
-							$kode=200;
-							eventLog(2);
+							eRROR404() unless (-d $lebonchemin);
+							afficheREP($lebonchemin) if (-d $lebonchemin);
+							$kode=200 if (-d $lebonchemin);
+							eventLog(2) if (-d $lebonchemin);
 						}
 					}
 					else{
 						eRROR404();
 						eventLog(0);
 					}
-
-					###
-
+					close(CLIENT);
 					}
+					
+			}
 
+			
 				}	
 				else{
 					print"1-Sauvegarde du pid\n";
@@ -161,16 +151,26 @@ if(@ARGV){
 		}
 
 		elsif ($ARGV[0] eq "stop"){
-			eventLog(1);
-			print "Arrêt du serveur\n";
-			close(SERVEUR) or die ("Fermeture du serveur impossible\n");
-			print "flag stop\n";
-			exit 1;
-			print "invisible\n";
+				open(PROCESS,"procfils") or die("Impossible d'ouvrir le fichier procfils");
+				while(<PROCESS>){
+					$procproc = $_;
+				}
+				close(PROCESS);
+				$procproc = $procproc+1;
+				kill QUIT,$procproc or die ("Le serveur n'est pas lancé !");
+				unlink(procfils);
 		}
 		
 		elsif($ARGV[0] eq "status"){
 			print "Voici les informations :\n";
+			if (-f "procfils"){
+				open(PROCESS,"procfils") or die("Impossible d'ouvrir le fichier procfils");
+				while(<PROCESS>){
+					$procproc = $_;
+				}
+				close(PROCESS);
+				print "PID du serveur : $procproc";
+			}
 
 		}
 		else{
@@ -290,14 +290,12 @@ sub afficheTXT{
 # param : le chemin du fichier HTML
 # ecrit le resultat sur le client
 sub afficheIMG{
-	$img = @_;
-	print "$_";
-	$tete = ok200();
-	#je n'arrive pas à afficher l'image je ne comprends pas pourquoi
-	my $debutIMG = "<!DOCTYPE HTML>\n"."<html>\n"."<head>\n"."</head>\n"."<body>\n"."<h3>Image</h3>"."<img src=/var/www/da2i/>\n";
-	my $finIMG = "</body>\n"."</html>\n";
-
-	print CLIENT $tete.$debutIMG.$finIMG;
+	open(IMG, "$_[0]"); 
+	while(<IMG>){
+		$image.=$_;
+	}
+	print CLIENT "HTTP/1.1 200 OK \r\n"."Content-Type : image/png \r\n"."\r\n";
+	print CLIENT $image;
 }
 
 # param : le chemin du fichier HTML
@@ -321,7 +319,8 @@ sub afficheREP{
 	foreach my $file (`ls @_`){
 		chomp;
 		#pas sur que ce soit utile puisque cela va donner /var/www/var/www/file
-		$path=$chemincoupe[0].$file;
+		#$path=$chemincoupe[0].$file;
+		$path=$file;
 		print CLIENT "<li><a href=$path>".$file."</a></li>\n";
 	}
 	print CLIENT $finLIS;
@@ -330,7 +329,6 @@ sub afficheREP{
 # param : exec ou route
 sub eventLog{
 	$datelog = time();
-	#$ARGV[0] ok $port ok $ip ok $test ok $lebonchemin ok $kode ok
 	if (($ARGV[0] eq "start") or ($ARGV[0] eq "stop")){
 		if ($_[0] eq "1"){
 			$typelog = $ARGV[0]." | get-d";		
